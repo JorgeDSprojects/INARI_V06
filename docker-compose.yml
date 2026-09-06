@@ -1,14 +1,15 @@
 name: inari_uns
 
-# Orchestrates the four independent stacks together in one project:
+# Orchestrates the five independent stacks together in one project:
 #   - UNS_MANAGER: Node-RED, EMQX, backend/frontend, Postgres
 #   - UNS_HISTORIAN: TimescaleDB + pgAdmin + MQTT ingestor
 #   - UNS_DASHBOARD: Postgres, Redis, MQTT->Redis bridge, backend/frontend
 #   - UNS_SILVER: TimescaleDB + pgAdmin + bronze-to-silver normalizer
+#   - UNS_COPILOT: Agentic LLM backend, Postgres
 #
 # Each stack keeps working standalone too (`cd UNS_MANAGER && docker compose up`,
 # `cd UNS_HISTORIAN && docker compose up`, `cd UNS_DASHBOARD && docker compose up`,
-# `cd UNS_SILVER && docker compose up`) — this file just includes all four
+# `cd UNS_SILVER && docker compose up`, `cd UNS_COPILOT && docker compose up`) — this file just includes all five
 # under one project so they always come up together, in the right order, on
 # the same uns_net network.
 #
@@ -19,6 +20,7 @@ include:
   - UNS_HISTORIAN/docker-compose.yml
   - UNS_DASHBOARD/docker-compose.yml
   - UNS_SILVER/docker-compose.yml
+  - UNS_COPILOT/docker-compose.yml
 
 # Cross-stack overrides, only meaningful once both stacks are merged into
 # one project (UNS_HISTORIAN's own compose file can't express these

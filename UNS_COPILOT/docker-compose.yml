@@ -1,0 +1,66 @@
+services:
+  # Service keys prefixed "copilot_" — see Global Constraints: the root
+  # docker-compose.yml's `include:` merges services by key across all
+  # included files, and bare "postgres"/"backend" collide with
+  # UNS_MANAGER's own keys.
+  copilot_postgres:
+    image: postgres:16-alpine
+    container_name: uns_copilot_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-copilot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-copilotpassword}
+      POSTGRES_DB: ${POSTGRES_DB:-uns_copilot}
+    volumes:
+      - copilot_postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "${POSTGRES_PORT:-5437}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-copilot} -d ${POSTGRES_DB:-uns_copilot}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - copilot_net
+
+  copilot_backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: uns_copilot_backend
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-copilot}:${POSTGRES_PASSWORD:-copilotpassword}@uns_copilot_postgres:5432/${POSTGRES_DB:-uns_copilot}}
+      SILVER_DATABASE_URL: ${SILVER_DATABASE_URL:-postgresql+asyncpg://silver:silverpassword@uns_silver_postgres:5432/uns_silver}
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://localhost:11434/v1}
+      LLM_API_KEY: ${LLM_API_KEY:-ollama}
+      LLM_MODEL: ${LLM_MODEL:-qwen2.5:14b}
+      MAX_ITERATIONS: ${MAX_ITERATIONS:-5}
+      MAX_HISTORY_MESSAGES: ${MAX_HISTORY_MESSAGES:-40}
+      QUERY_ROW_LIMIT: ${QUERY_ROW_LIMIT:-1000}
+      RAW_QUERY_MAX_RANGE_HOURS: ${RAW_QUERY_MAX_RANGE_HOURS:-24}
+      SEED_USERS: ${SEED_USERS:-Operario Juan,Ingeniera Maria,Administrador}
+      LANGFUSE_ENABLED: ${LANGFUSE_ENABLED:-false}
+      LANGFUSE_HOST: ${LANGFUSE_HOST:-}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+    ports:
+      - "${BACKEND_PORT:-8002}:8000"
+    depends_on:
+      copilot_postgres:
+        condition: service_healthy
+    networks:
+      - copilot_net
+      - uns_manager_net
+    restart: unless-stopped
+
+volumes:
+  copilot_postgres_data:
+    name: uns_copilot_copilot_postgres_data
+
+networks:
+  copilot_net:
+    driver: bridge
+    name: uns_copilot_copilot_net
+  uns_manager_net:
+    external: true
+    name: ${UNS_MANAGER_NETWORK_NAME:-uns_manager_uns_net}
