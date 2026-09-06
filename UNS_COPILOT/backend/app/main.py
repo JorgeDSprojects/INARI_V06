@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import AsyncSessionLocal, create_tables
-from app.routers import conversations, users
+from app.routers import chat, conversations, users
 from app.seed import seed_default_users
 
 logging.basicConfig(level=logging.INFO)
@@ -38,6 +38,7 @@ app.add_middleware(
 
 app.include_router(users.router)
 app.include_router(conversations.router)
+app.include_router(chat.router)
 
 
 @app.get("/health")

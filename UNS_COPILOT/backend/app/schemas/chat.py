@@ -40,3 +40,12 @@ class MessageRead(_Base):
 
 class ConversationDetailRead(ConversationRead):
     messages: list[MessageRead]
+
+
+class ChatMessageCreate(BaseModel):
+    text: str
+
+
+class ChatMessageResponse(BaseModel):
+    conversation_id: int
+    reply: str
