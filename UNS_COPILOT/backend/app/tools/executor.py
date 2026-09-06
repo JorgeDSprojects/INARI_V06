@@ -33,7 +33,7 @@ async def execute_tool(
 
     try:
         params = param_model(**arguments)
-    except ValidationError as exc:
+    except (ValidationError, TypeError) as exc:
         return {"error": f"Invalid arguments for {name}: {exc}"}
 
     try:
