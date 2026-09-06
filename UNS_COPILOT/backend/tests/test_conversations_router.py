@@ -30,3 +30,10 @@ def test_create_list_and_get_conversation(client: TestClient):
 
     detail = client.get(f"/conversations/{created['id']}").json()
     assert detail["messages"] == []
+
+
+def test_create_conversation_for_unknown_user_returns_404(client: TestClient):
+    """Without an explicit check this surfaces as an unhandled FK violation (500)."""
+    response = client.post("/conversations/", json={"user_id": 999_999_999})
+    assert response.status_code == 404
+    assert response.json()["detail"] == "User not found"

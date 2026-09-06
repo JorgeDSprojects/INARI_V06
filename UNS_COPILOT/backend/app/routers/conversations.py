@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
 
 from app.database import get_db
-from app.models.chat import Conversation, Message
+from app.models.chat import Conversation, Message, User
 from app.schemas.chat import ConversationCreate, ConversationDetailRead, ConversationRead
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
@@ -13,6 +13,10 @@ router = APIRouter(prefix="/conversations", tags=["conversations"])
 
 @router.post("/", response_model=ConversationRead, status_code=201)
 async def create_conversation(body: ConversationCreate, db: AsyncSession = Depends(get_db)):
+    # Without this an unknown user_id surfaces as an unhandled FK violation (500).
+    if not await db.get(User, body.user_id):
+        raise HTTPException(status_code=404, detail="User not found")
+
     conversation = Conversation(user_id=body.user_id, title=body.title)
     db.add(conversation)
     await db.commit()

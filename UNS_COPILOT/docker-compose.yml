@@ -31,7 +31,10 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-copilot}:${POSTGRES_PASSWORD:-copilotpassword}@uns_copilot_postgres:5432/${POSTGRES_DB:-uns_copilot}}
       SILVER_DATABASE_URL: ${SILVER_DATABASE_URL:-postgresql+asyncpg://silver:silverpassword@uns_silver_postgres:5432/uns_silver}
-      LLM_BASE_URL: ${LLM_BASE_URL:-http://localhost:11434/v1}
+      # "localhost" here would resolve to this container, not the Docker
+      # host — point at wherever Ollama really runs (the DGX Spark in the
+      # real deployment); host.docker.internal covers a local Ollama.
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:11434/v1}
       LLM_API_KEY: ${LLM_API_KEY:-ollama}
       LLM_MODEL: ${LLM_MODEL:-qwen2.5:14b}
       MAX_ITERATIONS: ${MAX_ITERATIONS:-5}
@@ -43,6 +46,10 @@ services:
       LANGFUSE_HOST: ${LANGFUSE_HOST:-}
       LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
       LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+    # Docker Desktop resolves host.docker.internal on its own; plain Linux
+    # Docker does not, so map it explicitly for the LLM_BASE_URL default above.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "${BACKEND_PORT:-8002}:8000"
     depends_on:

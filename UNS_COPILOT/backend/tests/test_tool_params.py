@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from pydantic import ValidationError
 
-from app.tools.params import GetLatestValueParams, QueryReadingsParams, check_raw_range
+from app.tools.params import GetLatestValueParams, ListEventsParams, QueryReadingsParams, check_raw_range
 
 
 def test_get_latest_value_requires_topic_and_signal_key():
@@ -42,3 +42,17 @@ def test_check_raw_range_ignores_aggregated_queries():
         topic="line3", signal_key="temp", from_time=now - timedelta(days=30), to_time=now, agg="1h",
     )
     check_raw_range(params, max_raw_range_hours=24)  # must not raise -- aggregated, not raw
+
+
+@pytest.mark.parametrize("to_offset", [timedelta(hours=-1), timedelta(0)])
+def test_query_readings_rejects_non_positive_time_range(to_offset):
+    now = datetime.now(timezone.utc)
+    with pytest.raises(ValidationError, match="to_time"):
+        QueryReadingsParams(topic="line3", signal_key="temp", from_time=now, to_time=now + to_offset)
+
+
+@pytest.mark.parametrize("to_offset", [timedelta(hours=-1), timedelta(0)])
+def test_list_events_rejects_non_positive_time_range(to_offset):
+    now = datetime.now(timezone.utc)
+    with pytest.raises(ValidationError, match="to_time"):
+        ListEventsParams(topic_filter="line3", from_time=now, to_time=now + to_offset)

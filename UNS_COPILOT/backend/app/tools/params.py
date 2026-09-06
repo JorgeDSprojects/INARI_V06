@@ -3,7 +3,25 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
+
+
+class _TimeRangeMixin(BaseModel):
+    """Rejects an inverted or empty window before it reaches SQL, where
+    `BETWEEN :from_time AND :to_time` would just silently return nothing and
+    the model would conclude there is no data."""
+
+    from_time: datetime
+    to_time: datetime
+
+    @model_validator(mode="after")
+    def _check_time_order(self):
+        if self.to_time <= self.from_time:
+            raise ValueError(
+                f"to_time ({self.to_time.isoformat()}) must be strictly after "
+                f"from_time ({self.from_time.isoformat()})"
+            )
+        return self
 
 
 class GetCatalogParams(BaseModel):
@@ -16,19 +34,15 @@ class GetLatestValueParams(BaseModel):
     signal_key: str
 
 
-class QueryReadingsParams(BaseModel):
+class QueryReadingsParams(_TimeRangeMixin):
     topic: str
     signal_key: str
-    from_time: datetime
-    to_time: datetime
     agg: Literal["raw", "1m", "1h"] = "raw"
 
 
-class ListEventsParams(BaseModel):
+class ListEventsParams(_TimeRangeMixin):
     topic_filter: str | None = None
     event_key: str | None = None
-    from_time: datetime
-    to_time: datetime
 
 
 def check_raw_range(params: QueryReadingsParams, max_raw_range_hours: int) -> None:
