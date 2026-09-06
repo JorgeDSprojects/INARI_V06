@@ -53,3 +53,4 @@ coverage.xml
 # ─── Superpowers scratch (git-ignored by design) ──────────────────────────────
 .superpowers/sdd/
 .superpowers/imagen/
+.worktrees/
