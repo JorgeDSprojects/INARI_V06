@@ -1,9 +1,9 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.tools.executor import execute_tool
-from app.tools.params import GetLatestValueParams, QueryReadingsParams
+from app.tools.params import GetLatestValueParams
 
 
 @pytest.mark.asyncio
@@ -59,6 +59,42 @@ async def test_a_tool_raising_becomes_an_error_result():
         )
     assert "error" in result
     assert "db is down" in result["error"]
+
+
+@pytest.mark.asyncio
+async def test_a_failing_tool_rolls_the_session_back():
+    """A DB error leaves the shared session's transaction aborted; without a
+    rollback every later tool call in the same turn fails too."""
+    session = MagicMock()
+    session.rollback = AsyncMock()
+    with patch("app.tools.executor.get_latest_value", new=AsyncMock(side_effect=RuntimeError("db is down"))):
+        result = await execute_tool(
+            session=session, name="get_latest_value", arguments={"topic": "line3", "signal_key": "temp"},
+            row_limit=10, max_raw_range_hours=24,
+        )
+    assert "error" in result
+    session.rollback.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_a_failing_rollback_does_not_mask_the_tool_error():
+    session = MagicMock()
+    session.rollback = AsyncMock(side_effect=RuntimeError("connection already closed"))
+    with patch("app.tools.executor.get_latest_value", new=AsyncMock(side_effect=RuntimeError("db is down"))):
+        result = await execute_tool(
+            session=session, name="get_latest_value", arguments={"topic": "line3", "signal_key": "temp"},
+            row_limit=10, max_raw_range_hours=24,
+        )
+    assert "db is down" in result["error"]
+
+
+@pytest.mark.asyncio
+async def test_get_catalog_dispatch_passes_row_limit():
+    with patch("app.tools.executor.get_catalog", new=AsyncMock(return_value=[])) as mocked:
+        await execute_tool(
+            session=None, name="get_catalog", arguments={}, row_limit=7, max_raw_range_hours=24,
+        )
+    assert mocked.call_args.kwargs.get("row_limit") == 7
 
 
 @pytest.mark.asyncio

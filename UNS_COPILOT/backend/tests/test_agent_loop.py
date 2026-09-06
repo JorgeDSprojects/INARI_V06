@@ -46,6 +46,21 @@ async def test_final_answer_with_no_tool_calls(conversation_id):
 
 
 @pytest.mark.asyncio
+async def test_empty_final_answer_falls_back_to_a_readable_message(conversation_id):
+    """A model that stops with no content must not surface as a blank reply."""
+    from app.database import AsyncSessionLocal
+    from app.agent.loop import _FALLBACK_REPLY
+
+    llm = FakeLLMProvider([ChatResponse(content=None, tool_calls=[], finish_reason="stop")])
+    async with AsyncSessionLocal() as session:
+        reply = await run_turn(
+            session, silver_session=None, llm=llm, conversation_id=conversation_id, user_text="say nothing",
+            max_iterations=5, max_history_messages=40, row_limit=1000, max_raw_range_hours=24,
+        )
+    assert reply == _FALLBACK_REPLY
+
+
+@pytest.mark.asyncio
 async def test_one_tool_call_then_final_answer(conversation_id):
     from app.database import AsyncSessionLocal
 

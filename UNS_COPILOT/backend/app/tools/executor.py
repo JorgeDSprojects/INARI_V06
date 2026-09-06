@@ -38,7 +38,7 @@ async def execute_tool(
 
     try:
         if name == "get_catalog":
-            result = await get_catalog(session, params)
+            result = await get_catalog(session, params, row_limit=row_limit)
         elif name == "get_latest_value":
             result = await get_latest_value(session, params)
         elif name == "query_readings":
@@ -49,6 +49,15 @@ async def execute_tool(
             return {"error": f"Unknown tool: {name!r}"}
     except Exception as exc:  # noqa: BLE001 - deliberate catch-all, see docstring
         logger.warning("Tool %s failed: %s", name, exc)
+        # A DB-level failure leaves the shared session's transaction aborted,
+        # so every later tool call in the same turn would fail too. Roll back
+        # to hand the next call a usable session. (`session` is None in the
+        # unit tests, which exercise the non-DB failure paths.)
+        if session is not None:
+            try:
+                await session.rollback()
+            except Exception:  # noqa: BLE001 - never let cleanup mask the real error
+                logger.warning("Rollback after %s failure also failed", name, exc_info=True)
         return {"error": str(exc)}
 
     return {"result": result}

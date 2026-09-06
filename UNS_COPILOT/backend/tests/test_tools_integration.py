@@ -1,3 +1,4 @@
+import json
 import os
 from datetime import datetime, timedelta, timezone
 
@@ -26,10 +27,15 @@ async def session():
     engine = create_async_engine(SILVER_DATABASE_URL)
     Session = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
     async with Session() as s:
+        # Three catalog signals (more than the row_limit the limit test uses),
+        # with NUMERIC range_min/range_max to exercise the Decimal handling.
         await s.execute(
             text(
-                "INSERT INTO signal_catalog (topic, signal_key, signal_type, unit, effective_since, effective_until) "
-                "VALUES (:topic, 'temp', 'raw', 'C', :since, NULL)"
+                "INSERT INTO signal_catalog "
+                "(topic, signal_key, signal_type, unit, range_min, range_max, effective_since, effective_until) "
+                "VALUES (:topic, 'temp', 'raw', 'C', 0, 100, :since, NULL), "
+                "(:topic, 'pressure', 'raw', 'bar', 0, 10, :since, NULL), "
+                "(:topic, 'speed', 'raw', 'rpm', 0, 3000, :since, NULL)"
             ),
             {"topic": TOPIC, "since": NOW - timedelta(days=1)},
         )
@@ -69,8 +75,25 @@ async def session():
 
 @pytest.mark.asyncio
 async def test_get_catalog_returns_active_entry(session: AsyncSession):
-    rows = await get_catalog(session, GetCatalogParams(topic_filter="pytest_enterprise"))
+    rows = await get_catalog(session, GetCatalogParams(topic_filter="pytest_enterprise"), row_limit=1000)
     assert any(r["topic"] == TOPIC and r["signal_key"] == "temp" for r in rows)
+
+
+@pytest.mark.asyncio
+async def test_get_catalog_respects_row_limit(session: AsyncSession):
+    rows = await get_catalog(session, GetCatalogParams(topic_filter="pytest_enterprise"), row_limit=2)
+    assert len(rows) == 2  # three seeded signals match, the LIMIT caps it at two
+
+
+@pytest.mark.asyncio
+async def test_get_catalog_ranges_are_json_native_floats(session: AsyncSession):
+    """range_min/range_max are NUMERIC -> Decimal, which json.dumps rejects
+    when the agent loop serialises the tool result."""
+    rows = await get_catalog(session, GetCatalogParams(topic_filter="pytest_enterprise"), row_limit=1000)
+    temp = next(r for r in rows if r["signal_key"] == "temp")
+    assert isinstance(temp["range_min"], float)
+    assert isinstance(temp["range_max"], float)
+    json.dumps(rows)  # must not raise
 
 
 @pytest.mark.asyncio
@@ -78,6 +101,9 @@ async def test_get_latest_value_returns_most_recent_point(session: AsyncSession)
     value = await get_latest_value(session, GetLatestValueParams(topic=TOPIC, signal_key="temp"))
     assert value is not None
     assert value["value_numeric"] == 22.0
+    assert isinstance(value["value_numeric"], float)
+    assert isinstance(value["time"], str)
+    json.dumps(value)  # must not raise
 
 
 @pytest.mark.asyncio
@@ -87,6 +113,9 @@ async def test_query_readings_returns_points_in_range(session: AsyncSession):
     )
     rows = await query_readings(session, params, row_limit=1000, max_raw_range_hours=24)
     assert len(rows) == 2
+    assert isinstance(rows[0]["time"], str)
+    assert isinstance(rows[0]["value_numeric"], float)
+    json.dumps(rows)  # must not raise
 
 
 @pytest.mark.asyncio
@@ -104,3 +133,5 @@ async def test_list_events_returns_matching_event(session: AsyncSession):
     rows = await list_events(session, params, row_limit=1000)
     assert len(rows) == 1
     assert rows[0]["payload"]["severity"] == "high"
+    assert isinstance(rows[0]["time"], str)
+    json.dumps(rows)  # must not raise
