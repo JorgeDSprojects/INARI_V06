@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.tools.normalize import row_to_json_safe
 from app.tools.params import GetLatestValueParams, QueryReadingsParams, check_raw_range
 
 _AGG_TABLES = {"raw": "silver_readings", "1m": "silver_readings_1m", "1h": "silver_readings_1h"}
@@ -18,7 +19,9 @@ async def get_latest_value(session: AsyncSession, params: GetLatestValueParams) 
         {"topic": params.topic, "signal_key": params.signal_key},
     )
     row = result.mappings().first()
-    return dict(row) if row else None
+    # `time` is TIMESTAMPTZ -> datetime and `value_numeric` NUMERIC ->
+    # Decimal; neither survives json.dumps unnormalised.
+    return row_to_json_safe(row) if row else None
 
 
 async def query_readings(
@@ -44,4 +47,6 @@ async def query_readings(
             "from_time": params.from_time, "to_time": params.to_time, "row_limit": row_limit,
         },
     )
-    return [dict(row) for row in result.mappings()]
+    # time/bucket -> isoformat, value_numeric & the avg/min/max aggregates
+    # -> float, so the model gets real JSON numbers.
+    return [row_to_json_safe(row) for row in result.mappings()]

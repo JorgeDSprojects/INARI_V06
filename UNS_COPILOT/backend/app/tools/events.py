@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.tools.normalize import row_to_json_safe
 from app.tools.params import ListEventsParams
 
 
@@ -21,4 +22,6 @@ async def list_events(session: AsyncSession, params: ListEventsParams, row_limit
     query += " ORDER BY time LIMIT :row_limit"
 
     result = await session.execute(text(query), bind)
-    return [dict(row) for row in result.mappings()]
+    # `time` is TIMESTAMPTZ -> datetime; `payload` is JSONB and already
+    # arrives as a native dict, so it needs no conversion.
+    return [row_to_json_safe(row) for row in result.mappings()]
