@@ -60,7 +60,10 @@ CREATE TABLE IF NOT EXISTS silver_ingest_state (
 );
 -- Idempotent migration: the bronze scan pairs `id > last_processed_id` with a
 -- `time >=` predicate so TimescaleDB can exclude old mqtt_messages chunks.
-ALTER TABLE silver_ingest_state ADD COLUMN IF NOT EXISTS last_processed_time TIMESTAMPTZ NOT NULL DEFAULT '-infinity';
+-- '0001-01-01' (matching db.py's own datetime.min fallback), not '-infinity':
+-- psycopg's binary timestamptz loader raises DataError trying to load the
+-- literal -infinity value into a Python datetime, which has no such value.
+ALTER TABLE silver_ingest_state ADD COLUMN IF NOT EXISTS last_processed_time TIMESTAMPTZ NOT NULL DEFAULT '0001-01-01 00:00:00+00';
 INSERT INTO silver_ingest_state (id, last_processed_id) VALUES (1, 0) ON CONFLICT (id) DO NOTHING;
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS silver_readings_1m
