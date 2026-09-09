@@ -16,8 +16,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    # Also on uns_manager_net (not just silver_net): UNS_COPILOT's
+    # copilot_backend needs to reach uns_silver_postgres by DNS name for
+    # its read-only tools, and it only joins uns_manager_net, not silver_net.
     networks:
       - silver_net
+      - uns_manager_net
 
   silver_pgadmin:
     image: dpage/pgadmin4:latest
