@@ -78,7 +78,9 @@ services:
     restart: unless-stopped
 
   nodered:
-    image: nodered/node-red:latest
+    build:
+      context: ./nodered
+      dockerfile: Dockerfile
     container_name: uns_nodered
     environment:
       TZ: Europe/Madrid

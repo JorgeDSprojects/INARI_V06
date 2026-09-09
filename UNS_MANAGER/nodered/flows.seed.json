@@ -1,0 +1,312 @@
+[
+    {
+        "id": "f6f2187d.f17ca8",
+        "type": "tab",
+        "label": "Flow 1",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "c509191e39a49a0c",
+        "type": "tab",
+        "label": "Simulador de se�ales",
+        "disabled": true
+    },
+    {
+        "id": "3c1fc4575db2a40f",
+        "type": "tab",
+        "label": "GALERNA_T01",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "sim-broker",
+        "type": "mqtt-broker",
+        "z": "c509191e39a49a0c",
+        "name": "EMQX local",
+        "broker": "emqx",
+        "port": "1883",
+        "clientid": "nodered-simulator2",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "84284fb7416ced69",
+        "type": "mqtt-broker",
+        "name": "EMQX local",
+        "broker": "emqx",
+        "port": 1883,
+        "clientid": "nodered-simulator",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "3cc11d24.ff01a2",
+        "type": "comment",
+        "z": "f6f2187d.f17ca8",
+        "name": "WARNING: please check you have started this container with a volume that is mounted to /data\\n otherwise any flow changes are lost when you redeploy or upgrade the container\\n (e.g. upgrade to a more recent node-red docker image).\\n  If you are using named volumes you can ignore this warning.\\n Double click or see info side panel to learn how to start Node-RED in Docker to save your work",
+        "info": "\nTo start docker with a bind mount volume (-v option), for example:\n\n```\ndocker run -it -p 1880:1880 -v /home/user/node_red_data:/data --name mynodered nodered/node-red\n```\n\nwhere `/home/user/node_red_data` is a directory on your host machine where you want to store your flows.\n\nIf you do not do this then you can experiment and redploy flows, but if you restart or upgrade the container the flows will be disconnected and lost. \n\nThey will still exist in a hidden data volume, which can be recovered using standard docker techniques, but that is much more complex than just starting with a named volume as described above.",
+        "x": 350,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "sim-inject",
+        "type": "inject",
+        "z": "c509191e39a49a0c",
+        "name": "? cada 2s",
+        "repeat": "2",
+        "once": true,
+        "onceDelay": 0.5,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 150,
+        "y": 120,
+        "wires": [
+            [
+                "sim-func"
+            ]
+        ]
+    },
+    {
+        "id": "sim-func",
+        "type": "function",
+        "z": "c509191e39a49a0c",
+        "name": "?? Temperatura senoidal",
+        "func": "// ??? Configuraci�n ?????????????????????????????????\nvar TOPIC      = \"uno/espana/castilla_y_leon/_informative\";\nvar BASE_TEMP  = 65;   // �C media\nvar AMPLITUDE  = 10;   // �10 �C\nvar PERIOD_S   = 60;   // periodo de la onda en segundos\nvar NOISE      = 0.3;  // ruido aleatorio �0.3 �C\n// ????????????????????????????????????????????????????\n\nvar t     = Date.now() / 1000;\nvar sine  = Math.sin(2 * Math.PI * t / PERIOD_S);\nvar noise = (Math.random() - 0.5) * 2 * NOISE;\nvar temp  = BASE_TEMP + AMPLITUDE * sine + noise;\n\nmsg.topic   = TOPIC;\nmsg.payload = JSON.stringify({\n    timestamp:     new Date().toISOString(),\n    temperature_c: Math.round(temp * 10) / 10,\n    unit:          \"C\",\n    signal:        \"temperature\",\n    simulated:     true\n});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 120,
+        "wires": [
+            [
+                "sim-mqtt",
+                "sim-debug"
+            ]
+        ]
+    },
+    {
+        "id": "sim-mqtt",
+        "type": "mqtt out",
+        "z": "c509191e39a49a0c",
+        "name": "? EMQX",
+        "topic": "",
+        "qos": "1",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "sim-broker",
+        "x": 620,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "sim-debug",
+        "type": "debug",
+        "z": "c509191e39a49a0c",
+        "name": "Debug",
+        "active": true,
+        "tosidebar": true,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 620,
+        "y": 150,
+        "wires": []
+    },
+    {
+        "id": "3bd45e90d020a20c",
+        "type": "inject",
+        "z": "3c1fc4575db2a40f",
+        "name": "? cada 2s",
+        "repeat": "2",
+        "once": true,
+        "onceDelay": 0.5,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 250,
+        "y": 200,
+        "wires": [
+            [
+                "724c08b235ef5552"
+            ]
+        ]
+    },
+    {
+        "id": "724c08b235ef5552",
+        "type": "function",
+        "z": "3c1fc4575db2a40f",
+        "name": "?? Temperatura senoidal",
+        "func": "// =================================================================\n// 1. TOPIC E IDENTIFICACIÓN DEL ACTIVO\n// =================================================================\nvar ASSET_PATH = \"GALERNA_ENERGY/SPAIN/GALICIA_COSTA_MORTE/T01/GENERATOR\";\nmsg.topic = ASSET_PATH + \"/_informative\";\n\n// =================================================================\n// 2. PARÁMETROS DE SIMULACIÓN DINÁMICA (ONDA SENOIDAL Y RUIDO)\n// =================================================================\nvar PERIOD_S = 120; // Periodo de variación de carga (2 minutos)\nvar t = Date.now() / 1000;\n\n// Variación principal de carga (0.0 = mínimo régimen, 1.0 = régimen máximo)\nvar loadFactor = (Math.sin((2 * Math.PI * t) / PERIOD_S) + 1) / 2; \n\nfunction getNoise(percentage) {\n    return (Math.random() - 0.5) * 2 * percentage;\n}\n\nfunction clamp(val, min, max) {\n    return Math.max(min, Math.min(max, val));\n}\n\n// =================================================================\n// 3. GENERACIÓN FÍSICA COHERENTE DE SEÑALES\n// =================================================================\n\n// --- RPMs del Generador (Rango: 0 a 1800 RPM) ---\nvar baseRpm = 1000 + (loadFactor * 650); // Oscila entre 1000 y 1650 RPM\nvar rpmAvg  = baseRpm + getNoise(10);\nvar rpmStd  = 5 + (loadFactor * 10) + Math.abs(getNoise(3)); \nvar rpmMax  = rpmAvg + (rpmStd * 2.2) + Math.abs(getNoise(5));\nvar rpmMin  = rpmAvg - (rpmStd * 2.2) - Math.abs(getNoise(5));\n\n// --- Temperaturas del Rodamiento (Bearings: 10 a 100 °C) ---\nvar bearBaseTemp = 35 + (loadFactor * 40); // 35°C a 75°C\nvar bear1Temp = bearBaseTemp + getNoise(1.5);\nvar bear2Temp = (bearBaseTemp - 4) + getNoise(1.5); // Típicamente el secundario opera algo más frío\n\n// --- Temperaturas de Fases del Estator (Phases: 15 a 130 °C) ---\nvar phaseBaseTemp = 40 + (loadFactor * 55); // 40°C a 95°C\nvar phase1Temp = phaseBaseTemp + getNoise(1.0);\nvar phase2Temp = phaseBaseTemp + 1.2 + getNoise(1.0); // Leve desbalance térmico normal\nvar phase3Temp = phaseBaseTemp - 0.8 + getNoise(1.0);\n\n// --- Temperatura del Anillo Rozante (Slip Ring: 10 a 100 °C) ---\nvar slipRingTemp = 25 + (loadFactor * 35) + getNoise(2.0);\n\n// =================================================================\n// 4. CONSTRUCCIÓN DEL PAYLOAD SEGÚN EL ESQUEMA JSON\n// =================================================================\nvar payloadData = {\n    \"timestamp\": new Date().toISOString(),\n    \n    // Rpm signals (Float)\n    \"Gen_RPM_Max\":          Math.round(clamp(rpmMax, 0, 1800) * 10) / 10,\n    \"Gen_RPM_Min\":          Math.round(clamp(rpmMin, 0, 1700) * 10) / 10,\n    \"Gen_RPM_Avg\":          Math.round(clamp(rpmAvg, 0, 1700) * 10) / 10,\n    \"Gen_RPM_Std\":          Math.round(clamp(rpmStd, 0, 600) * 10) / 10,\n    \n    // Thermal signals (Integer)\n    \"Gen_Bear_Temp_Avg\":    Math.round(clamp(bear1Temp, 10, 100)),\n    \"Gen_Bear2_Temp_Avg\":   Math.round(clamp(bear2Temp, 10, 100)),\n    \"Gen_Phase1_Temp_Avg\":  Math.round(clamp(phase1Temp, 15, 130)),\n    \"Gen_Phase2_Temp_Avg\":  Math.round(clamp(phase2Temp, 15, 130)),\n    \"Gen_Phase3_Temp_Avg\":  Math.round(clamp(phase3Temp, 15, 130)),\n    \"Gen_SlipRing_Temp_Avg\":Math.round(clamp(slipRingTemp, 10, 100))\n};\n\nmsg.payload = JSON.stringify(payloadData);\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 480,
+        "y": 200,
+        "wires": [
+            [
+                "db7525d78d965eea",
+                "edbcced2557bb7f1"
+            ]
+        ]
+    },
+    {
+        "id": "db7525d78d965eea",
+        "type": "mqtt out",
+        "z": "3c1fc4575db2a40f",
+        "name": "? EMQX",
+        "topic": "",
+        "qos": "1",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "84284fb7416ced69",
+        "x": 720,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "edbcced2557bb7f1",
+        "type": "debug",
+        "z": "3c1fc4575db2a40f",
+        "name": "Debug",
+        "active": true,
+        "tosidebar": true,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 720,
+        "y": 230,
+        "wires": []
+    },
+    {
+        "id": "5d5290383217d92e",
+        "type": "mqtt in",
+        "z": "3c1fc4575db2a40f",
+        "name": "analitics",
+        "topic": "GALERNA_ENERGY/SPAIN/GALICIA_COSTA_MORTE/T01/GENERATOR/_informative",
+        "qos": "1",
+        "datatype": "auto-detect",
+        "broker": "84284fb7416ced69",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 220,
+        "y": 360,
+        "wires": [
+            [
+                "2c150faf35de85b3"
+            ]
+        ]
+    },
+    {
+        "id": "33939bf838cf5207",
+        "type": "debug",
+        "z": "3c1fc4575db2a40f",
+        "name": "debug 1",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 720,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "2c150faf35de85b3",
+        "type": "function",
+        "z": "3c1fc4575db2a40f",
+        "name": "function 1",
+        "func": "// =================================================================\n// 1. CONFIGURACIÓN ANALÍTICA DE REFERENCIA (_analytical)\n// =================================================================\nvar analyticalConfig = {\n    \"thresholds\": {\n        \"Gen_RPM_Avg\": { \"warning_low\": 950, \"alarm_low\": 900, \"warning_high\": 1400, \"alarm_high\": 1500 },\n        \"Gen_Bear_Temp_Avg\": { \"warning_high\": 65, \"alarm_high\": 80 },\n        \"Gen_Bear2_Temp_Avg\": { \"warning_high\": 65, \"alarm_high\": 80 },\n        \"Gen_Phase1_Temp_Avg\": { \"warning_high\": 85, \"alarm_high\": 100 },\n        \"Gen_Phase2_Temp_Avg\": { \"warning_high\": 85, \"alarm_high\": 100 },\n        \"Gen_Phase3_Temp_Avg\": { \"warning_high\": 85, \"alarm_high\": 100 },\n        \"Gen_SlipRing_Temp_Avg\": { \"warning_high\": 70, \"alarm_high\": 90 },\n        \"phase_imbalance_max_delta_c\": { \"warning\": 5, \"alarm\": 10 }\n    }\n};\n\n// =================================================================\n// 2. PARSEO DEL PAYLOAD ENTRANTE (_informative)\n// =================================================================\nvar telemetry = typeof msg.payload === \"string\" ? JSON.parse(msg.payload) : msg.payload;\nvar activeAlarms = [];\nvar thresholds = analyticalConfig.thresholds;\n\n// Helper para registrar alarmas\nfunction addAlarm(signal, level, value, threshold, message) {\n    activeAlarms.push({\n        signal: signal,\n        severity: level, // 'WARNING' o 'ALARM'\n        current_value: value,\n        threshold_violated: threshold,\n        message: message\n    });\n}\n\n// =================================================================\n// 3. EVALUACIÓN DE SEÑALES INDIVIDUALES\n// =================================================================\nfor (var signalName in thresholds) {\n    if (telemetry.hasOwnProperty(signalName)) {\n        var val = telemetry[signalName];\n        var rule = thresholds[signalName];\n\n        // Verificación de límites superiores\n        if (rule.alarm_high && val >= rule.alarm_high) {\n            addAlarm(signalName, \"CRITICAL\", val, rule.alarm_high, \"Temperatura/RPM crítica alta\");\n        } else if (rule.warning_high && val >= rule.warning_high) {\n            addAlarm(signalName, \"WARNING\", val, rule.warning_high, \"Advertencia de temperatura/RPM alta\");\n        }\n\n        // Verificación de límites inferiores\n        if (rule.alarm_low && val <= rule.alarm_low) {\n            addAlarm(signalName, \"CRITICAL\", val, rule.alarm_low, \"RPM crítica baja\");\n        } else if (rule.warning_low && val <= rule.warning_low) {\n            addAlarm(signalName, \"WARNING\", val, rule.warning_low, \"Advertencia de RPM baja\");\n        }\n    }\n}\n\n// =================================================================\n// 4. EVALUACIÓN DE REGLAS COMPUESTAS (Desbalance de Fases)\n// =================================================================\nif (telemetry.Gen_Phase1_Temp_Avg && telemetry.Gen_Phase2_Temp_Avg && telemetry.Gen_Phase3_Temp_Avg) {\n    var p1 = telemetry.Gen_Phase1_Temp_Avg;\n    var p2 = telemetry.Gen_Phase2_Temp_Avg;\n    var p3 = telemetry.Gen_Phase3_Temp_Avg;\n\n    var maxPhaseDelta = Math.max(p1, p2, p3) - Math.min(p1, p2, p3);\n    var phaseRule = thresholds.phase_imbalance_max_delta_c;\n\n    if (maxPhaseDelta >= phaseRule.alarm) {\n        addAlarm(\"Phase_Imbalance\", \"CRITICAL\", maxPhaseDelta, phaseRule.alarm, \"Desbalance térmico crítico entre fases\");\n    } else if (maxPhaseDelta >= phaseRule.warning) {\n        addAlarm(\"Phase_Imbalance\", \"WARNING\", maxPhaseDelta, phaseRule.warning, \"Desbalance térmico de advertencia entre fases\");\n    }\n}\n\n// =================================================================\n// 5. CONSTRUCCIÓN DEL PAYLOAD DE ESTADO ANALÍTICO\n// =================================================================\nvar status = activeAlarms.length > 0 ? (activeAlarms.some(a => a.severity === \"CRITICAL\") ? \"CRITICAL\" : \"WARNING\") : \"OK\";\n\nmsg.topic = \"GALERNA_ENERGY/SPAIN/GALICIA_COSTA_MORTE/T01/GENERATOR/_analytical\";\nmsg.payload = JSON.stringify({\n    timestamp: telemetry.timestamp || new Date().toISOString(),\n    subsystem_id: \"GENERATOR\",\n    status: status,\n    active_alarms_count: activeAlarms.length,\n    alarms: activeAlarms\n});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 360,
+        "wires": [
+            [
+                "33939bf838cf5207",
+                "c3cbf0074cfbbd41"
+            ]
+        ]
+    },
+    {
+        "id": "c3cbf0074cfbbd41",
+        "type": "mqtt out",
+        "z": "3c1fc4575db2a40f",
+        "name": "? EMQX",
+        "topic": "",
+        "qos": "1",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "84284fb7416ced69",
+        "x": 720,
+        "y": 420,
+        "wires": []
+    }
+]
