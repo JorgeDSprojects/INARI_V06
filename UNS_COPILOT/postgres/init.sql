@@ -1,0 +1,4 @@
+-- Tables are created by the backend's SQLAlchemy metadata on startup
+-- (see app/database.py: create_tables). This file exists so the
+-- docker-compose volume mount point is documented and ready if a raw-SQL
+-- migration is ever needed later.
