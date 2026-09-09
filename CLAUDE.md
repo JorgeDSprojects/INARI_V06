@@ -31,6 +31,8 @@ This is a medallion (bronze→silver) architecture applied to industrial time-se
 
 `UNS_DASHBOARD`'s live charts do **not** read `UNS_HISTORIAN` — they browse topics currently flowing through Redis Streams via its own `bridge` service (`EMQX → bridge → Redis Stream → backend WebSocket → browser`). Historical charts query `UNS_HISTORIAN` directly.
 
+**`UNS_COPILOT`** (5th service, planned): a chat backend that answers questions about `UNS_SILVER` data via a closed set of typed LLM tools (never free-form SQL). Design/plan only so far — `UNS_COPILOT/docs/superpowers/specs/2026-09-06-uns-copilot-design.md` and `.../plans/2026-09-06-uns-copilot-backend.md` — no code yet, not wired into the root `docker-compose.yml`.
+
 ## Cross-service dependencies (bring-up order)
 
 Each service can run standalone, but downstream services need their upstreams' Docker network already up:
@@ -101,3 +103,4 @@ cd UNS_DASHBOARD/frontend && npm run build                  # tsc && vite build
 - `<service>/README.md` (all but `UNS_MANAGER`) — quickstart, ports, and how to verify that service is working end-to-end.
 - `<service>/docs/superpowers/specs/*-design.md` — the authoritative design doc per service (data model, processing pipeline, decisions).
 - `manual/En/` and `manual/es/` — step-by-step guides for verifying data actually lands in the historian via pgAdmin.
+- `UNS_COPILOT/docs/superpowers/` — design spec and implementation plan for the not-yet-built 5th service (chat backend, tool-calling over `UNS_SILVER`).
