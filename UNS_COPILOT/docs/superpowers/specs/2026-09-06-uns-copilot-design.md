@@ -1,6 +1,6 @@
 # UNS Copilot — Natural-Language Chat Backend Design Spec
 **Date:** 2026-09-06
-**Status:** Draft — pending user review
+**Status:** Approved — confirmed by project owner 2026-09-09
 **Scope:** Backend service only — chat API, conversation persistence, and a closed set of typed tools that let an LLM answer questions about `UNS_SILVER` data via controlled tool-calling (never free-form SQL). Chat UI and report export (Markdown/PDF/Excel) are explicitly out of scope — separate future sub-projects, each with its own spec/plan cycle.
 
 ---
